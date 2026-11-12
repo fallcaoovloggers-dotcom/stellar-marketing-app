@@ -534,9 +534,15 @@ async function stellarTestPush() {
       { body: {} }
     );
 
-    if (response.error) {
-      throw response.error;
-    }
+   
+if (response.error) {
+  const detalhe = response.error.context
+    ? await response.error.context.text()
+    : response.error.message;
+
+  throw new Error(detalhe);
+}
+
 
     alert(
       "Resultado: " + JSON.stringify(response.data)
