@@ -214,6 +214,16 @@ body[data-view=demandas] .actions [onclick='openExpense()'],body[data-view=deman
 >
   🔔 Ativar notificações
 </button>
+
+<button
+  type="button"
+  id="stellarTestPushButton"
+  class="btn"
+  onclick="stellarTestPush()"
+  style="position:fixed;right:12px;bottom:195px;z-index:31"
+>
+  🔔 Testar notificação
+</button>
   
 <main><div class="top"><div><div class="eyebrow">Stellar / Painel financeiro</div><h1 id="pageTitle">Visão geral</h1><div class="sub" id="pageSub">Acompanhe a receita recorrente e o caminho até os primeiros R$ 10 mil mensais.</div></div><div class="actions"><button class="btn" onclick="openExpense()">+ Despesa</button><button class="btn primary" data-views="demandas" onclick="newTask()">+ Nova demanda</button><button class="btn primary" data-views="funil" onclick="newLead()">+ Novo Lead</button><button class="btn" data-views="funil" onclick="openAct('prospeccao')">Nova Prospecção</button><button class="btn" data-views="funil" onclick="openAct('reuniao_realizada')">Registrar Reunião</button><button class="btn" data-views="funil" onclick="openAct('fechamento')">Registrar Fechamento</button><button class="btn" data-views="caixa" onclick="openCash()">+ Lançamento</button><button class="btn primary" onclick="openClient()">+ Novo cliente</button></div></div>
 <div id="banner" class="banner" hidden></div>
