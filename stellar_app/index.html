@@ -515,6 +515,27 @@ async function stellarEnableNotifications() {
   }
 }
 </script>
+
+<script>
+async function stellarTestPush() {
+  try {
+    const response = await stellarClient.functions.invoke(
+      "stellar-push",
+      { body: {} }
+    );
+
+    if (response.error) {
+      throw response.error;
+    }
+
+    alert(
+      "Resultado: " + JSON.stringify(response.data)
+    );
+  } catch (error) {
+    alert("Erro no teste: " + error.message);
+  }
+}
+</script>
   
 </body>
 </html>
