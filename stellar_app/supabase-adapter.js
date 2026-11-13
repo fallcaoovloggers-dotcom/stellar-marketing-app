@@ -20,18 +20,31 @@ function stellarCollection(name){if(!stellarCollections.includes(name))throw Err
   async add(payload){
     const r=await stellarClient.from(name).insert({payload}).select('id').single();
     stellarCheck(r.error);
-    await stellarRefresh(name);
-    // Evento confirmado no banco: o servidor valida o tipo e o valor antes de notificar.
-    // Conversão do funil cria cliente E fechamento; somente o fechamento gera a comemoração.
-    let event=null;
-    if(name==='clients' && !payload?.leadId) event='new_client';
-    if(name==='tasks') event='new_task';
-    if(name==='acts' && payload?.type==='fechamento') event='contract_signed';
+    // Dispara após o INSERT confirmado e antes de atualizar a interface.
+    const event = name==='tasks' ? 'new_task'
+      : name==='clients' && !payload?.leadId ? 'new_client'
+      : name==='acts' && payload?.type==='fechamento' ? 'contract_signed'
+      : null;
     if(event && r.data?.id){
-      void stellarClient.functions.invoke('stellar-push',{body:{event,recordId:r.data.id}})
-        .then(({error})=>{if(error) console.warn('STELLAR: notificação não enviada',error)})
-        .catch(error=>console.warn('STELLAR: notificação não enviada',error));
+      console.info('STELLAR: acionando alerta',event);
+      try {
+        const response=await stellarClient.functions.invoke('stellar-push',{
+          body:{event,recordId:r.data.id}
+        });
+        if(response.error){
+          const responseText=response.error.context
+            ? await response.error.context.text().catch(()=>response.error.message)
+            : response.error.message;
+          console.error('STELLAR: falha ao enviar alerta',responseText);
+        } else {
+          console.info('STELLAR: resposta de alerta',response.data);
+        }
+      }catch(error){
+        console.error('STELLAR: falha ao chamar alerta',error);
+      }
     }
+    await stellarRefresh(name);
+    return {id:r.data.id};
   },
   onSnapshot(ok,fail){stellarListeners.set(name,{ok,fail});stellarRefresh(name);return ()=>stellarListeners.delete(name)}
 }}
