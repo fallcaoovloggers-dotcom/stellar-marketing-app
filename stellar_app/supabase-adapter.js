@@ -17,7 +17,22 @@ function stellarDoc(name,id){return {
   async delete(){const r=await stellarClient.from(name).delete().eq('id',id);stellarCheck(r.error);await stellarRefresh(name)}
 }}
 function stellarCollection(name){if(!stellarCollections.includes(name))throw Error('Coleção inválida');return {
-  async add(payload){const r=await stellarClient.from(name).insert({payload});stellarCheck(r.error);await stellarRefresh(name)},
+  async add(payload){
+    const r=await stellarClient.from(name).insert({payload}).select('id').single();
+    stellarCheck(r.error);
+    await stellarRefresh(name);
+    // Evento confirmado no banco: o servidor valida o tipo e o valor antes de notificar.
+    // Conversão do funil cria cliente E fechamento; somente o fechamento gera a comemoração.
+    let event=null;
+    if(name==='clients' && !payload?.leadId) event='new_client';
+    if(name==='tasks') event='new_task';
+    if(name==='acts' && payload?.type==='fechamento') event='contract_signed';
+    if(event && r.data?.id){
+      void stellarClient.functions.invoke('stellar-push',{body:{event,recordId:r.data.id}})
+        .then(({error})=>{if(error) console.warn('STELLAR: notificação não enviada',error)})
+        .catch(error=>console.warn('STELLAR: notificação não enviada',error));
+    }
+  },
   onSnapshot(ok,fail){stellarListeners.set(name,{ok,fail});stellarRefresh(name);return ()=>stellarListeners.delete(name)}
 }}
 function stellarWatch(callback){
