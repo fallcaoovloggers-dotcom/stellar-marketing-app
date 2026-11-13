@@ -3,6 +3,24 @@ let stellarClient=null,stellarDb=null;
 const stellarCollections=['clients','expenses','cash','leads','acts','goals','tasks'];
 const stellarListeners=new Map();
 function stellarCheck(error){if(error)throw new Error(error.message||String(error))}
+
+// A Edge Function calcula o MRR a partir dos clientes ativos e controla alertas únicos.
+async function stellarCheckMrrMilestones(){
+  try {
+    const response=await stellarClient.functions.invoke('stellar-push',{
+      body:{event:'mrr_milestone'}
+    });
+    if(response.error){
+      const detail=response.error.context
+        ? await response.error.context.text().catch(()=>response.error.message)
+        : response.error.message;
+      console.error('STELLAR: falha no alerta de MRR', detail);
+    } else {
+      console.info('STELLAR: resultado do MRR',response.data);
+    }
+  } catch(error){ console.error('STELLAR: falha ao consultar meta de MRR',error); }
+}
+
 async function stellarRefresh(name){
   const fn=stellarListeners.get(name);if(!fn)return;
   const {data,error}=await stellarClient.from(name).select('id,payload').order('created_at',{ascending:true});
@@ -13,6 +31,7 @@ function stellarDoc(name,id){return {
   async update(fields){
     const {data,error}=await stellarClient.from(name).select('payload').eq('id',id).single();stellarCheck(error);
     const r=await stellarClient.from(name).update({payload:{...(data?.payload||{}),...fields}}).eq('id',id);stellarCheck(r.error);await stellarRefresh(name);
+    if(name==='clients' && ('amount' in fields || 'status' in fields)) await stellarCheckMrrMilestones();
   },
   async delete(){const r=await stellarClient.from(name).delete().eq('id',id);stellarCheck(r.error);await stellarRefresh(name)}
 }}
@@ -44,6 +63,7 @@ function stellarCollection(name){if(!stellarCollections.includes(name))throw Err
       }
     }
     await stellarRefresh(name);
+    if(name==='clients') await stellarCheckMrrMilestones();
     return {id:r.data.id};
   },
   onSnapshot(ok,fail){stellarListeners.set(name,{ok,fail});stellarRefresh(name);return ()=>stellarListeners.delete(name)}
